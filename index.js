@@ -14,21 +14,35 @@ class CssWebpPlugin {
     }, options);
   }
 
-  normalizeUrl(url = '') {
+  normalizeUrl(url = '', publicPath = '') {
     let s = url.replace(/^['"]|['"]$/g, '');
     if (s.startsWith('data:')) return s;
+    
+    // 移除协议
     s = s.replace(/^[a-zA-Z]+:\/\//, '');
+    // 移除双斜杠
     s = s.replace(/^\/\//, '');
-    s = s.replace(/^[^/]+\/(?:static\/.*?\/)?/, '');
-    // 修复：优先保留 assets/ 前缀，如果没有则保留 img/ 前缀
-    const assetsIdx = s.indexOf('assets/');
-    if (assetsIdx !== -1) {
-      s = s.substring(assetsIdx);
-    } else {
-      const idx = s.indexOf('img/');
-      if (idx !== -1) s = s.substring(idx);
+    
+    // 移除域名和可能的 CDN 路径前缀
+    // 匹配: domain.com/path/ 或 domain.com/static/path/
+    s = s.replace(/^[^/]+\/(?:static\/[^/]+\/)?/, '');
+    
+    // 移除 publicPath 前缀（如果存在且匹配）
+    if (publicPath) {
+      // 标准化 publicPath：移除协议和域名
+      let normalizedPublicPath = publicPath.replace(/^[a-zA-Z]+:\/\//, '').replace(/^\/\//, '');
+      normalizedPublicPath = normalizedPublicPath.replace(/^[^/]+\/(?:static\/[^/]+\/)?/, '');
+      normalizedPublicPath = normalizedPublicPath.replace(/^\/+/, '');
+      
+      if (normalizedPublicPath && s.startsWith(normalizedPublicPath)) {
+        s = s.substring(normalizedPublicPath.length);
+      }
     }
+    
+    // 处理相对路径和多余的斜杠
     s = s.replace(/^\/+/, '').replace(/^\.\/+/, '').replace(/^\.\.\/+/, '');
+    
+    // 返回完整的相对路径（不依赖特定的目录名）
     return s;
   }
 
@@ -125,7 +139,9 @@ class CssWebpPlugin {
             webpUrls.forEach(urlMatch => {
               let url = urlMatch.match(/url\(([^)]+)\)/)[1];
               url = url.replace(/^['"]|['"]$/g, '');
-              const filePath = this.normalizeUrl(url).split('?')[0];
+              // 使用 publicPath 来标准化 URL
+              const publicPath = stats.compilation.outputOptions.publicPath || '';
+              const filePath = this.normalizeUrl(url, publicPath).split('?')[0];
               const webpPath = path.join(outputPath, filePath);
 
               if (!fs.existsSync(webpPath)) {
@@ -172,4 +188,3 @@ class CssWebpPlugin {
 }
 
 module.exports = CssWebpPlugin;
-
