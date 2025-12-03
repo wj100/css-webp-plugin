@@ -20,8 +20,14 @@ class CssWebpPlugin {
     s = s.replace(/^[a-zA-Z]+:\/\//, '');
     s = s.replace(/^\/\//, '');
     s = s.replace(/^[^/]+\/(?:static\/.*?\/)?/, '');
-    const idx = s.indexOf('img/');
-    if (idx !== -1) s = s.substring(idx);
+    // 修复：优先保留 assets/ 前缀，如果没有则保留 img/ 前缀
+    const assetsIdx = s.indexOf('assets/');
+    if (assetsIdx !== -1) {
+      s = s.substring(assetsIdx);
+    } else {
+      const idx = s.indexOf('img/');
+      if (idx !== -1) s = s.substring(idx);
+    }
     s = s.replace(/^\/+/, '').replace(/^\.\/+/, '').replace(/^\.\.\/+/, '');
     return s;
   }
